@@ -1,0 +1,17 @@
+.git
+.gitignore
+_build/
+_deps/
+_data/
+venv/
+*.ipynb_checkpoints
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+
+
+
