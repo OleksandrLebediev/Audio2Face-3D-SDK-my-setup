@@ -31,8 +31,17 @@ FROM ${BASE_IMAGE}
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git git-lfs build-essential cmake ninja-build curl ca-certificates \
+    git git-lfs build-essential cmake ninja-build curl ca-certificates wget \
     && rm -rf /var/lib/apt/lists/*
+
+# Install ZLIB 1.3.1 (required version)
+RUN cd /tmp && \
+    wget https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz && \
+    tar -xzf zlib-1.3.1.tar.gz && \
+    cd zlib-1.3.1 && \
+    ./configure --prefix=/usr && \
+    make && make install && \
+    cd /tmp && rm -rf zlib-1.3.1*
 
 WORKDIR /app
 
