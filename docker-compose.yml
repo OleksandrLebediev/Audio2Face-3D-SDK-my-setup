@@ -31,6 +31,7 @@ services:
       - BUILD_IN_CONTAINER=${BUILD_IN_CONTAINER:-0}
       - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
       - SERVER_PORT=${SERVER_PORT:-8000}
+      - PYTHONPATH=/app
     
     # Port mapping
     ports:
