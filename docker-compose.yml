@@ -37,6 +37,9 @@ services:
     ports:
       - "${SERVER_PORT:-8000}:8000"
     
+    # Working directory
+    working_dir: /app
+    
     # Volumes (optional - for persistent data)
     volumes:
       - ./models:/app/models:rw
