@@ -1,6 +1,6 @@
 # Multi-stage build: builder + runtime to reduce final image size
 
-ARG BASE_IMAGE=nvcr.io/nvidia/tensorrt:24.12-py3
+ARG BASE_IMAGE=nvcr.io/nvidia/tensorrt:25.01-py3
 
 # ============ Builder stage ============
 FROM ${BASE_IMAGE} as builder
