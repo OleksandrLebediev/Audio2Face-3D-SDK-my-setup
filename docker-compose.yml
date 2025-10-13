@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  audio2x:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SKIP_BUILD: 0
+    image: audio2x-sdk:latest
+    container_name: audio2x-service
+    restart: unless-stopped
+    
+    # GPU access
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute, utility]
+    
+    # Environment variables
+    environment:
+      - BUILD_TYPE=${BUILD_TYPE:-release}
+      - CUDA_PATH=${CUDA_PATH:-/usr/local/cuda}
+      - TENSORRT_ROOT_DIR=${TENSORRT_ROOT_DIR:-/usr/lib/x86_64-linux-gnu}
+      - HF_TOKEN=${HF_TOKEN}
+      - DOWNLOAD_MODELS=${DOWNLOAD_MODELS:-1}
+      - RUN_UNIT_TESTS=${RUN_UNIT_TESTS:-0}
+      - BUILD_IN_CONTAINER=${BUILD_IN_CONTAINER:-0}
+      - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
+      - SERVER_PORT=${SERVER_PORT:-8000}
+    
+    # Port mapping
+    ports:
+      - "${SERVER_PORT:-8000}:8000"
+    
+    # Volumes (optional - for persistent data)
+    volumes:
+      - ./models:/app/models:rw
+      - ./logs:/app/logs:rw
+    
+    # Command to run
+    command: uvicorn server.app:app --host 0.0.0.0 --port 8000
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+# Optional: Add NGINX reverse proxy
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: audio2x-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./nginx/ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - audio2x
+
+networks:
+  default:
+    name: audio2x-network
+

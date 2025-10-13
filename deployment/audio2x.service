@@ -1,0 +1,25 @@
+[Unit]
+Description=Audio2X SDK Service
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/Audio2Face-3D-SDK
+Environment="PATH=/opt/Audio2Face-3D-SDK/venv/bin:/usr/local/cuda/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="CUDA_PATH=/usr/local/cuda"
+Environment="TENSORRT_ROOT_DIR=/usr/local/tensorrt"
+Environment="LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/local/tensorrt/lib:${LD_LIBRARY_PATH}"
+Environment="BUILD_TYPE=release"
+
+ExecStart=/opt/Audio2Face-3D-SDK/venv/bin/uvicorn server.app:app --host 0.0.0.0 --port 8000
+
+Restart=always
+RestartSec=10
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
