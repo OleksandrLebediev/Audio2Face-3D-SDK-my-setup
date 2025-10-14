@@ -44,6 +44,8 @@ services:
     volumes:
       - ./models:/app/models:rw
       - ./logs:/app/logs:rw
+      - ./_data:/app/_data:rw
+      - ./results:/app/results:rw
     
     # Command to run
     command: python -m uvicorn server.app:app --host 0.0.0.0 --port 8000
