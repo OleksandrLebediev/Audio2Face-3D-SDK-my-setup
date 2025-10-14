@@ -89,8 +89,8 @@ cd Audio2Face-3D-SDK
 if [ ! -d "_data/audio2face-models" ] || [ ! -d "_data/generated" ]; then
     echo "Models not found, downloading..."
     export HF_TOKEN=${HF_TOKEN}
-    python -m pip install huggingface-hub
-    python -c "
+    python3 -m pip install huggingface-hub
+    python3 -c "
 import os
 from huggingface_hub import hf_hub_download
 os.environ['HF_TOKEN'] = '${HF_TOKEN}'
