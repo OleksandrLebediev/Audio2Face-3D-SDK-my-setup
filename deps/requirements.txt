@@ -27,7 +27,6 @@ scipy==1.11.4
 sympy==1.14.0
 # Fallback to CUDA-less versions if not found.
 torch==2.7.1+cu128
-torch==2.7.1
 tqdm==4.67.1
 typing_extensions==4.14.0
 urllib3==2.5.0
