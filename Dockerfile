@@ -64,13 +64,16 @@ ENV CUDA_PATH=/usr/local/cuda \
 # Optional: pull LFS files
 RUN git lfs install && git lfs pull || true
 
-# Allow skipping build during image creation (useful on Apple Silicon)
-ARG SKIP_BUILD=0
-RUN if [ "${SKIP_BUILD}" = "1" ]; then \
-      echo "Skipping SDK build at image build time"; \
-    else \
-      ./fetch_deps.sh release && ./build.sh all release; \
-    fi
+# Set executable permissions for scripts
+RUN chmod +x fetch_deps.sh build.sh download_models.sh gen_testdata.sh run_sample.sh && \
+    chmod +x tools/packman/packman
+
+# Build SDK
+RUN echo "Starting dependency fetch..." && \
+    ./fetch_deps.sh release && \
+    echo "Dependencies fetched successfully. Starting build..." && \
+    ./build.sh all release && \
+    echo "Build completed successfully."
 
 # Entrypoint
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh

@@ -18,14 +18,6 @@ if [[ -n "${TENSORRT_ROOT_DIR:-}" ]]; then
   export LD_LIBRARY_PATH="${TENSORRT_ROOT_DIR}/lib:${TENSORRT_ROOT_DIR}:${LD_LIBRARY_PATH:-}"
 fi
 
-# Optional in-container build (for images built with SKIP_BUILD=1)
-if [[ "${BUILD_IN_CONTAINER:-0}" == "1" ]]; then
-  pushd "${BASE_DIR}" >/dev/null
-  ./fetch_deps.sh "${BUILD_TYPE}"
-  ./build.sh all "${BUILD_TYPE}"
-  popd >/dev/null
-fi
-
 # Optionally download models (requires HF_TOKEN)
 if [[ "${DOWNLOAD_MODELS:-0}" == "1" ]]; then
   if [[ -n "${HF_TOKEN:-}" ]]; then

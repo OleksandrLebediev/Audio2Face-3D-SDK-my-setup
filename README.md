@@ -7,6 +7,13 @@ The Audio2X SDK is a comprehensive toolkit for fast audio-driven animation and e
 
 The SDK is designed for high-performance applications requiring fast audio processing and animation generation. It leverages NVIDIA's GPU computing capabilities through CUDA and TensorRT for optimal performance.
 
+## 🚀 Quick Start
+
+**Want to get started quickly?** Check out [QUICKSTART.md](QUICKSTART.md) for:
+- One-command deployment to server
+- Docker Compose setup
+- Local development guide
+
 ### Key Features
 
 - **Faster Than Real-time Processing**: Faster than 60 FPS frame generation

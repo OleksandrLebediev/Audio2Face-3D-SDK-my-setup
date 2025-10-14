@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
         std::vector<float> eyesAll;
         std::vector<long long> tsAll;
 
-        auto cb = [&](void* /*ud*/, const nva2f::IGeometryExecutor::Results& r) {
+        auto cb = [&](void* /*ud*/, const nva2f::IGeometryExecutor::Results& r) -> bool {
             tsAll.push_back(static_cast<long long>(r.timeStampCurrentFrame));
             if (skinSize && r.skinGeometry.Size()) {
                 std::vector<float> host(r.skinGeometry.Size());
@@ -114,6 +114,7 @@ int main(int argc, char** argv) {
                 nva2x::CopyDeviceToHost({host.data(), host.size()}, r.eyesRotation, r.eyesCudaStream);
                 eyesAll.insert(eyesAll.end(), host.begin(), host.end());
             }
+            return true;
         };
         exec.SetResultsCallback(cb, nullptr);
         while (nva2x::GetNbReadyTracks(exec) > 0) exec.Execute(nullptr);
