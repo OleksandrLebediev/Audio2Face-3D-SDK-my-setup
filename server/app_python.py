@@ -65,31 +65,73 @@ def list_models():
     }
 
 
-@app.post("/infer/simple")
-async def infer_simple(audio: UploadFile = File(...)):
+@app.post("/infer/blendshapes")
+async def infer_blendshapes(audio: UploadFile = File(...), model: str = "mark"):
     """
-    Simple inference endpoint that processes audio and returns basic info
-    This is a placeholder that will be expanded once we verify SDK availability
+    Generate facial blendshapes from audio using Audio2Face
+    
+    Args:
+        audio: WAV audio file
+        model: Model name (mark, claire, james, v3.0)
+    
+    Returns:
+        JSON with processing results and output information
     """
+    build_type = os.getenv("BUILD_TYPE", "release")
+    binary = f"/app/_build/{build_type}/audio2face-sdk/bin/sample-a2f-executor"
+    
+    if not os.path.isfile(binary):
+        raise HTTPException(status_code=500, detail=f"Executable not found: {binary}")
+    
+    # Map model names to paths
+    model_map = {
+        "mark": "/app/_data/audio2face-models/audio2face-3d-v2.3-mark",
+        "claire": "/app/_data/audio2face-models/audio2face-3d-v2.3.1-claire",
+        "james": "/app/_data/audio2face-models/audio2face-3d-v2.3.1-james",
+        "v3.0": "/app/_data/audio2face-models/audio2face-3d-v3.0",
+    }
+    
+    model_path = model_map.get(model)
+    if not model_path or not os.path.exists(model_path):
+        raise HTTPException(status_code=400, detail=f"Invalid or missing model: {model}")
+    
     with tempfile.TemporaryDirectory() as td:
         # Save uploaded audio
         wav_path = Path(td) / "input.wav"
         with open(wav_path, "wb") as f:
             shutil.copyfileobj(audio.file, f)
         
-        # Get file size
-        file_size = wav_path.stat().st_size
-        
-        return {
-            "success": True,
-            "audio_received": {
-                "filename": audio.filename,
-                "content_type": audio.content_type,
-                "size_bytes": file_size,
-            },
-            "message": "Audio received successfully. SDK integration in progress.",
-            "note": "Use /health to check SDK availability"
-        }
+        try:
+            # Run the sample executor
+            import subprocess
+            result = subprocess.run(
+                [binary, str(wav_path)],
+                env={
+                    **os.environ,
+                    "CUDA_PATH": os.getenv("CUDA_PATH", "/usr/local/cuda"),
+                    "TENSORRT_ROOT_DIR": os.getenv("TENSORRT_ROOT_DIR", "/usr/lib/x86_64-linux-gnu"),
+                },
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            
+            return {
+                "success": result.returncode == 0,
+                "audio_info": {
+                    "filename": audio.filename,
+                    "size_bytes": wav_path.stat().st_size,
+                },
+                "model": model,
+                "model_path": model_path,
+                "stdout": result.stdout[-5000:] if result.stdout else "",
+                "stderr": result.stderr[-5000:] if result.stderr else "",
+                "returncode": result.returncode,
+            }
+        except subprocess.TimeoutExpired:
+            raise HTTPException(status_code=504, detail="Processing timeout")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")
 
 
 @app.get("/")
@@ -102,7 +144,10 @@ def root():
             "health": "/health - Check service health and SDK status",
             "models": "/models - List available models",
             "docs": "/docs - Interactive API documentation",
-            "infer_simple": "POST /infer/simple - Simple audio inference (placeholder)",
+            "infer_blendshapes": "POST /infer/blendshapes - Generate facial blendshapes from audio",
+        },
+        "examples": {
+            "blendshapes": "curl -X POST http://localhost:8000/infer/blendshapes -F 'audio=@audio.wav' -F 'model=mark'"
         }
     }
 
