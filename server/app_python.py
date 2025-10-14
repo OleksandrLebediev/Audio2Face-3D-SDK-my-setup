@@ -66,16 +66,26 @@ def list_models():
 
 
 @app.post("/infer/blendshapes")
-async def infer_blendshapes(audio: UploadFile = File(...), model: str = "mark"):
+async def infer_blendshapes(
+    audio: UploadFile = File(...), 
+    model: str = "mark",
+    return_format: str = "json"
+):
     """
     Generate facial blendshapes from audio using Audio2Face
     
     Args:
-        audio: WAV audio file
+        audio: WAV audio file (16kHz, mono, s16le recommended)
         model: Model name (mark, claire, james, v3.0)
+        return_format: Response format - "json" or "summary" (default: json)
     
     Returns:
-        JSON with processing results and output information
+        JSON with processing results. If successful, includes:
+        - success: bool
+        - audio_info: dict with filename and size
+        - model: str - model used
+        - processing_summary: dict with tracks processed and frame counts
+        - stdout/stderr: process output for debugging
     """
     build_type = os.getenv("BUILD_TYPE", "release")
     binary = f"/app/_build/{build_type}/audio2face-sdk/bin/sample-a2f-executor"
@@ -83,7 +93,7 @@ async def infer_blendshapes(audio: UploadFile = File(...), model: str = "mark"):
     if not os.path.isfile(binary):
         raise HTTPException(status_code=500, detail=f"Executable not found: {binary}")
     
-    # Map model names to paths
+    # Map model names to paths  
     model_map = {
         "mark": "/app/_data/audio2face-models/audio2face-3d-v2.3-mark",
         "claire": "/app/_data/audio2face-models/audio2face-3d-v2.3.1-claire",
@@ -104,6 +114,8 @@ async def infer_blendshapes(audio: UploadFile = File(...), model: str = "mark"):
         try:
             # Run the sample executor
             import subprocess
+            import re
+            
             result = subprocess.run(
                 [binary, str(wav_path)],
                 env={
@@ -116,7 +128,26 @@ async def infer_blendshapes(audio: UploadFile = File(...), model: str = "mark"):
                 timeout=60
             )
             
-            return {
+            # Parse processing summary from stdout
+            processing_summary = {}
+            if result.returncode == 0 and result.stdout:
+                # Extract track processing info: "Track 0 processed 240 frames."
+                track_pattern = r"Track (\d+) processed (\d+) frames\."
+                tracks = re.findall(track_pattern, result.stdout)
+                if tracks:
+                    processing_summary["tracks"] = [
+                        {"track_id": int(tid), "frames": int(frames)} 
+                        for tid, frames in tracks
+                    ]
+                    processing_summary["total_tracks"] = len(tracks)
+                    processing_summary["total_frames"] = sum(int(f) for _, f in tracks)
+                
+                # Extract audio info
+                duration_match = re.search(r"Length in Seconds: (\d+)", result.stdout)
+                if duration_match:
+                    processing_summary["audio_duration_sec"] = int(duration_match.group(1))
+            
+            response = {
                 "success": result.returncode == 0,
                 "audio_info": {
                     "filename": audio.filename,
@@ -124,10 +155,17 @@ async def infer_blendshapes(audio: UploadFile = File(...), model: str = "mark"):
                 },
                 "model": model,
                 "model_path": model_path,
-                "stdout": result.stdout[-5000:] if result.stdout else "",
-                "stderr": result.stderr[-5000:] if result.stderr else "",
+                "processing_summary": processing_summary,
                 "returncode": result.returncode,
             }
+            
+            # Add full output for debugging if requested or on error
+            if return_format == "json" or result.returncode != 0:
+                response["stdout"] = result.stdout[-5000:] if result.stdout else ""
+                response["stderr"] = result.stderr[-5000:] if result.stderr else ""
+            
+            return response
+            
         except subprocess.TimeoutExpired:
             raise HTTPException(status_code=504, detail="Processing timeout")
         except Exception as e:
@@ -147,7 +185,8 @@ def root():
             "infer_blendshapes": "POST /infer/blendshapes - Generate facial blendshapes from audio",
         },
         "examples": {
-            "blendshapes": "curl -X POST http://localhost:8000/infer/blendshapes -F 'audio=@audio.wav' -F 'model=mark'"
+            "blendshapes_full": "curl -X POST http://localhost:8000/infer/blendshapes -F 'audio=@audio.wav' -F 'model=mark' -F 'return_format=json'",
+            "blendshapes_summary": "curl -X POST http://localhost:8000/infer/blendshapes -F 'audio=@audio.wav' -F 'model=mark' -F 'return_format=summary'"
         }
     }
 
