@@ -86,46 +86,58 @@ int main(int argc, char** argv) {
         const std::size_t jawSize = exec.GetJawTransformSize();
         const std::size_t eyesSize = exec.GetEyesRotationSize();
 
-        std::vector<float> skinAll;  // concatenated frames
-        std::vector<float> tongueAll;
-        std::vector<float> jawAll;
-        std::vector<float> eyesAll;
-        std::vector<long long> tsAll;
+        struct CallbackData {
+            std::vector<float> skinAll;
+            std::vector<float> tongueAll;
+            std::vector<float> jawAll;
+            std::vector<float> eyesAll;
+            std::vector<long long> tsAll;
+            std::size_t skinSize;
+            std::size_t tongueSize;
+            std::size_t jawSize;
+            std::size_t eyesSize;
+        } data;
 
-        auto cb = [&](void* /*ud*/, const nva2f::IGeometryExecutor::Results& r) -> bool {
-            tsAll.push_back(static_cast<long long>(r.timeStampCurrentFrame));
-            if (skinSize && r.skinGeometry.Size()) {
+        data.skinSize = skinSize;
+        data.tongueSize = tongueSize;
+        data.jawSize = jawSize;
+        data.eyesSize = eyesSize;
+
+        auto cb = +[](void* ud, const nva2f::IGeometryExecutor::Results& r) -> bool {
+            auto* cbData = static_cast<CallbackData*>(ud);
+            cbData->tsAll.push_back(static_cast<long long>(r.timeStampCurrentFrame));
+            if (cbData->skinSize && r.skinGeometry.Size()) {
                 std::vector<float> host(r.skinGeometry.Size());
                 nva2x::CopyDeviceToHost({host.data(), host.size()}, r.skinGeometry, r.skinCudaStream);
-                skinAll.insert(skinAll.end(), host.begin(), host.end());
+                cbData->skinAll.insert(cbData->skinAll.end(), host.begin(), host.end());
             }
-            if (tongueSize && r.tongueGeometry.Size()) {
+            if (cbData->tongueSize && r.tongueGeometry.Size()) {
                 std::vector<float> host(r.tongueGeometry.Size());
                 nva2x::CopyDeviceToHost({host.data(), host.size()}, r.tongueGeometry, r.tongueCudaStream);
-                tongueAll.insert(tongueAll.end(), host.begin(), host.end());
+                cbData->tongueAll.insert(cbData->tongueAll.end(), host.begin(), host.end());
             }
-            if (jawSize && r.jawTransform.Size()) {
+            if (cbData->jawSize && r.jawTransform.Size()) {
                 std::vector<float> host(r.jawTransform.Size());
                 nva2x::CopyDeviceToHost({host.data(), host.size()}, r.jawTransform, r.jawCudaStream);
-                jawAll.insert(jawAll.end(), host.begin(), host.end());
+                cbData->jawAll.insert(cbData->jawAll.end(), host.begin(), host.end());
             }
-            if (eyesSize && r.eyesRotation.Size()) {
+            if (cbData->eyesSize && r.eyesRotation.Size()) {
                 std::vector<float> host(r.eyesRotation.Size());
                 nva2x::CopyDeviceToHost({host.data(), host.size()}, r.eyesRotation, r.eyesCudaStream);
-                eyesAll.insert(eyesAll.end(), host.begin(), host.end());
+                cbData->eyesAll.insert(cbData->eyesAll.end(), host.begin(), host.end());
             }
             return true;
         };
-        exec.SetResultsCallback(cb, nullptr);
+        exec.SetResultsCallback(cb, &data);
         while (nva2x::GetNbReadyTracks(exec) > 0) exec.Execute(nullptr);
 
         // Save NPZ: 1D flat arrays + shapes metadata are implicit; consumers must reshape accordingly
         // keys: timestamps_ms, skin, tongue, jaw, eyes; also sizes: skin_size, tongue_size, jaw_size, eyes_size
-        cnpy::npz_save(outPath.c_str(), "timestamps_ms", tsAll.data(), {tsAll.size()}, "w");
-        if (!skinAll.empty()) cnpy::npz_save(outPath.c_str(), "skin", skinAll.data(), {skinAll.size()}, "a");
-        if (!tongueAll.empty()) cnpy::npz_save(outPath.c_str(), "tongue", tongueAll.data(), {tongueAll.size()}, "a");
-        if (!jawAll.empty()) cnpy::npz_save(outPath.c_str(), "jaw", jawAll.data(), {jawAll.size()}, "a");
-        if (!eyesAll.empty()) cnpy::npz_save(outPath.c_str(), "eyes", eyesAll.data(), {eyesAll.size()}, "a");
+        cnpy::npz_save(outPath.c_str(), "timestamps_ms", data.tsAll.data(), {data.tsAll.size()}, "w");
+        if (!data.skinAll.empty()) cnpy::npz_save(outPath.c_str(), "skin", data.skinAll.data(), {data.skinAll.size()}, "a");
+        if (!data.tongueAll.empty()) cnpy::npz_save(outPath.c_str(), "tongue", data.tongueAll.data(), {data.tongueAll.size()}, "a");
+        if (!data.jawAll.empty()) cnpy::npz_save(outPath.c_str(), "jaw", data.jawAll.data(), {data.jawAll.size()}, "a");
+        if (!data.eyesAll.empty()) cnpy::npz_save(outPath.c_str(), "eyes", data.eyesAll.data(), {data.eyesAll.size()}, "a");
         // sizes
         long long skinSz = static_cast<long long>(skinSize);
         long long tongueSz = static_cast<long long>(tongueSize);
