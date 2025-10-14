@@ -21,7 +21,12 @@ RUN curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-py310_24.7.1-0-Lin
     /opt/conda/bin/conda create -y -n py310 python=3.10 pip && \
     /opt/conda/bin/conda clean -afy && \
     /opt/conda/bin/conda run -n py310 pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    /opt/conda/bin/conda run -n py310 pip install --no-cache-dir -r requirements.txt -r requirements-service.txt && \
+    # Pin a single NumPy version for the whole image to avoid resolver conflicts
+    /opt/conda/bin/conda run -n py310 pip install --no-cache-dir numpy==1.24.4 && \
+    # Install core deps first (will reuse the pinned NumPy)
+    /opt/conda/bin/conda run -n py310 pip install --no-cache-dir -r requirements.txt && \
+    # Install service deps without pulling transitive deps (to prevent re-pinning NumPy)
+    /opt/conda/bin/conda run -n py310 pip install --no-cache-dir -r requirements-service.txt --no-deps && \
     mkdir -p /opt/venv && cp -a /opt/conda/envs/py310/. /opt/venv/ && \
     find /opt/venv -type d -name __pycache__ -exec rm -rf {} + || true
 
