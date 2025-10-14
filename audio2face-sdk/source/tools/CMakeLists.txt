@@ -11,8 +11,9 @@ target_sources(a2f_weights_csv PRIVATE
 )
 
 target_link_libraries(a2f_weights_csv PRIVATE
-    audio2x
-    cxxopts::cxxopts
+    audio2face-core
+    audio2x-common
+    CXXOPTS::cxxopts
     AudioFile::AudioFile
 )
 
@@ -29,8 +30,10 @@ target_sources(a2f_a2e_combined_csv PRIVATE
 )
 
 target_link_libraries(a2f_a2e_combined_csv PRIVATE
-    audio2x
-    cxxopts::cxxopts
+    audio2face-core
+    audio2emotion-core
+    audio2x-common
+    CXXOPTS::cxxopts
     AudioFile::AudioFile
 )
 
@@ -47,8 +50,9 @@ target_sources(a2f_geometry_npz PRIVATE
 )
 
 target_link_libraries(a2f_geometry_npz PRIVATE
-    audio2x
-    cxxopts::cxxopts
+    audio2face-core
+    audio2x-common
+    CXXOPTS::cxxopts
     AudioFile::AudioFile
     Cnpy::Cnpy
 )

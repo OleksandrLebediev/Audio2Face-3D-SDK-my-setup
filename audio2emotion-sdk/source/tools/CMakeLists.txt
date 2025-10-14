@@ -11,9 +11,10 @@ target_sources(a2e_csv PRIVATE
 )
 
 target_link_libraries(a2e_csv PRIVATE
-    audio2x
+    audio2emotion-core
+    audio2x-common
     AudioFile::AudioFile
-    cxxopts::cxxopts
+    CXXOPTS::cxxopts
 )
 
 
