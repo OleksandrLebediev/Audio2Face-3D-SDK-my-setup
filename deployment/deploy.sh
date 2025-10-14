@@ -64,6 +64,7 @@ fi
 
 # Step 4: Clone/Update repository
 echo -e "${YELLOW}📦 Setting up repository...${NC}"
+ssh "$SERVER" 'git config --global --add safe.directory /root/Audio2Face-3D-SDK || true'
 ssh "$SERVER" << EOF
 if [ -d "Audio2Face-3D-SDK" ]; then
     echo "Repository exists, pulling latest changes..."
@@ -80,7 +81,35 @@ fi
 EOF
 echo -e "${GREEN}✓ Repository ready${NC}"
 
-# Step 5: Create .env file
+# Step 5: Download models if needed
+echo -e "${YELLOW}📥 Checking and downloading models...${NC}"
+if [ -n "$HF_TOKEN" ]; then
+    ssh "$SERVER" << EOF
+cd Audio2Face-3D-SDK
+if [ ! -d "_data/audio2face-models" ] || [ ! -d "_data/generated" ]; then
+    echo "Models not found, downloading..."
+    export HF_TOKEN=${HF_TOKEN}
+    python -m pip install huggingface-hub
+    python -c "
+import os
+from huggingface_hub import hf_hub_download
+os.environ['HF_TOKEN'] = '${HF_TOKEN}'
+try:
+    hf_hub_download(repo_id='nvidia/audio2face-3d-v2.3-mark', filename='model.json', local_dir='_data/audio2face-models')
+    print('Models downloaded successfully')
+except Exception as e:
+    print(f'Model download failed: {e}')
+"
+else
+    echo "Models already exist, skipping download"
+fi
+EOF
+    echo -e "${GREEN}✓ Models ready${NC}"
+else
+    echo -e "${YELLOW}⚠️  No HF_TOKEN provided. Models must be downloaded manually${NC}"
+fi
+
+# Step 6: Create .env file
 echo -e "${YELLOW}⚙️  Configuring environment...${NC}"
 if [ -n "$HF_TOKEN" ]; then
     ssh "$SERVER" << EOF
@@ -118,7 +147,7 @@ ENVFILE
 EOF
 fi
 
-# Step 6: Build and start the service
+# Step 7: Build and start the service
 echo -e "${YELLOW}🔨 Building and starting the service...${NC}"
 ssh "$SERVER" << 'EOF'
 cd Audio2Face-3D-SDK
@@ -127,11 +156,11 @@ docker compose up -d --build
 EOF
 echo -e "${GREEN}✓ Service started${NC}"
 
-# Step 7: Wait for service to be ready
+# Step 8: Wait for service to be ready
 echo -e "${YELLOW}⏳ Waiting for service to be ready...${NC}"
 sleep 10
 
-# Step 8: Check health
+# Step 9: Check health
 echo -e "${YELLOW}🏥 Checking service health...${NC}"
 for i in {1..30}; do
     if ssh "$SERVER" "curl -s http://localhost:8000/health" &>/dev/null; then
@@ -146,7 +175,7 @@ for i in {1..30}; do
     sleep 2
 done
 
-# Step 9: Display service info
+# Step 10: Display service info
 echo ""
 echo -e "${GREEN}════════════════════════════════════════${NC}"
 echo -e "${GREEN}✅ Deployment completed successfully!${NC}"
