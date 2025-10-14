@@ -68,11 +68,14 @@ RUN git lfs install && git lfs pull || true
 RUN chmod +x fetch_deps.sh build.sh download_models.sh gen_testdata.sh run_sample.sh && \
     chmod +x tools/packman/packman
 
-# Build SDK (libraries only, excluding tools that have linking issues)
+# Build SDK (core library + sample executables)
 RUN echo "Starting dependency fetch..." && \
     ./fetch_deps.sh release && \
     echo "Dependencies fetched successfully. Starting build..." && \
     ./build.sh audio2x release && \
+    echo "Building sample executables..." && \
+    ./build.sh sample-a2f-executor release && \
+    ./build.sh sample-a2e-executor release && \
     echo "Build completed successfully."
 
 # Entrypoint
