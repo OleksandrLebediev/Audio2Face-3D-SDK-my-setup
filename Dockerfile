@@ -68,7 +68,7 @@ RUN git lfs install && git lfs pull || true
 RUN chmod +x fetch_deps.sh build.sh download_models.sh gen_testdata.sh run_sample.sh && \
     chmod +x tools/packman/packman
 
-# Build SDK (core library + sample executables)
+# Build SDK (core library + sample executables + CLI tools)
 RUN echo "Starting dependency fetch..." && \
     ./fetch_deps.sh release && \
     echo "Dependencies fetched successfully. Starting build..." && \
@@ -76,6 +76,10 @@ RUN echo "Starting dependency fetch..." && \
     echo "Building sample executables..." && \
     ./build.sh sample-a2f-executor release && \
     ./build.sh sample-a2e-executor release && \
+    echo "Building CLI tools..." && \
+    ./build.sh a2f_weights_csv release && \
+    ./build.sh a2f_geometry_npz release && \
+    ./build.sh a2f_a2e_combined_csv release && \
     echo "Build completed successfully."
 
 # Entrypoint
