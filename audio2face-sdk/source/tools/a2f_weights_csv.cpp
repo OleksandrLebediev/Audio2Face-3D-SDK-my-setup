@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
         std::cout << "\n";
 
         struct Ctx { std::size_t frame = 0; } ctx;
-        auto cb = [](void* ud, const nva2f::IBlendshapeExecutor::HostResults& r) {
+        auto cb = [](void* ud, const nva2f::IBlendshapeExecutor::HostResults& r, std::error_code /*ec*/) {
             auto* c = static_cast<Ctx*>(ud);
             const double t = static_cast<double>(r.timeStampCurrentFrame) / 1000.0;
             std::cout << c->frame++ << "," << std::fixed << std::setprecision(3) << t;

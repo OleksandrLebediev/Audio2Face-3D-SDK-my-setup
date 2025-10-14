@@ -68,9 +68,9 @@ int main(int argc, char** argv) {
         eparams.cudaStream = cudaStream->Data(); eparams.nbTracks = 1; const auto sharedAudio = audioAcc.get(); eparams.sharedAudioAccumulators = &sharedAudio;
         auto eexec = ToUniquePtr(nva2e::CreateClassifierEmotionExecutor(eparams, a2eInfo->GetExecutorCreationParameters(60000, 30, 1, 30)));
         if (!eexec) throw std::runtime_error("A2E exec failed");
-        std::map<nva2x::timestamp_t, EmotionsAtTs> emoByTs;
+        std::map<long long, EmotionsAtTs> emoByTs;
         auto ecb = [](void* ud, const nva2e::IEmotionExecutor::Results& r) -> bool {
-            auto* mapPtr = static_cast<std::map<nva2x::timestamp_t, EmotionsAtTs>*>(ud);
+            auto* mapPtr = static_cast<std::map<long long, EmotionsAtTs>*>(ud);
             std::vector<float> host(r.emotions.Size());
             nva2x::CopyDeviceToHost({host.data(), host.size()}, r.emotions, r.cudaStream);
             (*mapPtr)[r.timeStampCurrentFrame] = EmotionsAtTs{std::move(host)};
@@ -105,8 +105,8 @@ int main(int argc, char** argv) {
         for (std::size_t i = 0; i < weightCount; ++i) std::cout << ",pose_" << i;
         std::cout << "\n";
 
-        struct Ctx { std::size_t frame = 0; std::map<nva2x::timestamp_t, EmotionsAtTs>* emo; } ctx{0, &emoByTs};
-        auto cbh = [](void* ud, const nva2f::IBlendshapeExecutor::HostResults& r) {
+        struct Ctx { std::size_t frame = 0; std::map<long long, EmotionsAtTs>* emo; } ctx{0, &emoByTs};
+        auto cbh = [](void* ud, const nva2f::IBlendshapeExecutor::HostResults& r, std::error_code /*ec*/) {
             auto* c = static_cast<Ctx*>(ud);
             const double t = static_cast<double>(r.timeStampCurrentFrame) / 1000.0;
             // find nearest or last-known emotion by timestamp
